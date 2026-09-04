@@ -1,0 +1,34 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: base64:2fl+KtvkdmxDAdG3yLjwQT1KqB8m5n0pQxYzWvUsTrE=
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/www/html/database/database.sqlite
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+    volumes:
+      - ./storage:/var/www/html/storage
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.4
+    profiles: ["mysql"]
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: translations
+      MYSQL_USER: translation
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: Localization Management Service API
+  description: |
+    API-driven localization management service supporting multiple languages,
+    contextual labels, metadata (status, context, version, created_by), search,
+    and fast JSON export for frontend applications.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Application API
+tags:
+  - name: Authentication
+    description: User authentication and profile endpoints
+  - name: Languages
+    description: Supported locale languages management
+  - name: Labels
+    description: Contextual tags and labels management
+  - name: Localizations
+    description: Localization key-value content, search, versioning, and export
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+  schemas:
+    Localization:
+      type: object
+      properties:
+        id: { type: integer }
+        key: { type: string, example: home.welcome }
+        language: { type: string, example: en }
+        content: { type: string, example: Welcome }
+        status: { type: string, enum: [draft, approved, archived], example: approved }
+        context: { type: string, example: Header navigation banner text }
+        version: { type: integer, example: 1 }
+        created_by_user_id: { type: integer, example: 1 }
+        created_by: { type: string, example: Admin User }
+        labels:
+          type: array
+          items: { type: string }
+          example: [web, mobile]
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Language:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string, example: en }
+        name: { type: string, example: English }
+        is_active: { type: boolean }
+    Label:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string, example: web }
+    ExportResponse:
+      type: object
+      properties:
+        language: { type: string, example: en }
+        localizations:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              content: { type: string, example: Welcome }
+              status: { type: string, example: approved }
+              context: { type: string, example: Homepage hero banner greeting }
+              version: { type: integer, example: 1 }
+paths:
+  /login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate and receive API token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: admin@example.com }
+                password: { type: string, example: password }
+                device_name: { type: string, example: swagger-ui }
+      responses:
+        '200':
+          description: Authenticated successfully
+        '422':
+          description: Invalid credentials
+  /logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke current access token
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Logged out successfully
+  /user:
+    get:
+      tags: [Authentication]
+      summary: Current authenticated user profile
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: User profile details
+  /languages:
+    get:
+      tags: [Languages]
+      summary: List all active languages
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Language list
+    post:
+      tags: [Languages]
+      summary: Create a new language
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string, example: de }
+                name: { type: string, example: German }
+                is_active: { type: boolean, example: true }
+      responses:
+        '201':
+          description: Language created
+  /labels:
+    get:
+      tags: [Labels]
+      summary: List all labels
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Label list
+    post:
+      tags: [Labels]
+      summary: Create a new label
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, example: ios }
+      responses:
+        '201':
+          description: Label created
+  /localizations:
+    get:
+      tags: [Localizations]
+      summary: Search and list localizations
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Free-text search across key and content
+        - in: query
+          name: key
+          schema: { type: string }
+        - in: query
+          name: content
+          schema: { type: string }
+        - in: query
+          name: language
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [draft, approved, archived] }
+        - in: query
+          name: labels[]
+          schema: { type: array, items: { type: string } }
+        - in: query
+          name: per_page
+          schema: { type: integer, maximum: 100 }
+      responses:
+        '200':
+          description: Paginated localizations list
+    post:
+      tags: [Localizations]
+      summary: Create or upsert a localization entry
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, language, content]
+              properties:
+                key: { type: string, example: home.welcome }
+                language: { type: string, example: en }
+                content: { type: string, example: Welcome }
+                status: { type: string, enum: [draft, approved, archived], example: approved }
+                context: { type: string, example: Hero section title }
+                labels:
+                  type: array
+                  items: { type: string }
+                  example: [web, mobile]
+      responses:
+        '201':
+          description: Localization created/updated
+  /localizations/search:
+    get:
+      tags: [Localizations]
+      summary: Dedicated search endpoint
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: key
+          schema: { type: string }
+        - in: query
+          name: content
+          schema: { type: string }
+        - in: query
+          name: language
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [draft, approved, archived] }
+        - in: query
+          name: labels[]
+          schema: { type: array, items: { type: string } }
+        - in: query
+          name: per_page
+          schema: { type: integer, maximum: 100 }
+      responses:
+        '200':
+          description: Search results
+  /localizations/export:
+    get:
+      tags: [Localizations]
+      summary: Export localizations with metadata (or flat string map)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: language
+          required: true
+          schema: { type: string, example: en }
+        - in: query
+          name: status
+          schema: { type: string, enum: [draft, approved, archived] }
+        - in: query
+          name: include_metadata
+          schema: { type: boolean, example: true }
+          description: Set to false to return flat key-value string map
+        - in: query
+          name: labels[]
+          schema: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Export payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+  /localizations/{localization}:
+    get:
+      tags: [Localizations]
+      summary: View a single localization by ID
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: localization
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Localization details
+    put:
+      tags: [Localizations]
+      summary: Update a single localization entry
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: localization
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key: { type: string }
+                language: { type: string }
+                content: { type: string }
+                status: { type: string, enum: [draft, approved, archived] }
+                context: { type: string }
+                labels:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Localization updated
+    delete:
+      tags: [Localizations]
+      summary: Delete a single localization entry
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: localization
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Localization deleted
